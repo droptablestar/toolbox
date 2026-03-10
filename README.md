@@ -47,10 +47,21 @@ docker run -it --rm --device /dev/dri:/dev/dri toolbox
 
 ## Unraid Docker Template Setup
 
-To access the host's Docker daemon from inside the container (enabling `docker ps`, `docker logs`, etc. against Unraid containers), add a path mapping in the Unraid Docker template:
+Configure the following path mappings in the Unraid Docker template:
 
-| Field | Value |
-|-------|-------|
-| Container Path | `/var/run/docker.sock` |
-| Host Path | `/var/run/docker.sock` |
-| Access Mode | Read/Write |
+| Container Path | Host Path | Access Mode | Notes |
+|----------------|-----------|-------------|-------|
+| `/var/run/docker.sock` | `/var/run/docker.sock` | Read/Write | Access host Docker daemon |
+| `/mnt/user` | `/mnt/user` | Read/Write | Access Unraid user shares |
+| `/opt/toolbox` | `/mnt/user/appdata/toolbox` | Read/Write | Toolbox appdata |
+| `/root` | `/mnt/user/appdata/toolbox/home` | Read/Write | Persistent home directory |
+
+**Extra Parameters:**
+```
+--device /dev/dri:/dev/dri --group-add video
+```
+
+**Post Arguments:**
+```
+sleep infinity
+```
