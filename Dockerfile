@@ -1,6 +1,8 @@
 FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PUID=99
+ENV PGID=100
 
 RUN apt-get update && apt-get install -y \
     # Core utilities
@@ -80,11 +82,20 @@ ENV XDG_CACHE_HOME=/tmp/.cache
 # optional but recommended in your container environment
 # ENV OPENCODE_DISABLE_DEFAULT_PLUGINS=true
 
+# Install gosu for privilege dropping in entrypoint
+RUN curl -fsSL "https://github.com/tianon/gosu/releases/download/1.17/gosu-amd64" \
+        -o /usr/local/bin/gosu \
+    && chmod +x /usr/local/bin/gosu \
+    && gosu --version
+
 RUN apt-get update && apt-get install -y curl ffmpeg python3 \
  && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
     -o /usr/local/bin/yt-dlp \
  && chmod a+rx /usr/local/bin/yt-dlp
 
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["/bin/bash"]
 
 
