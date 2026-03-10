@@ -54,7 +54,9 @@ Configure the following path mappings in the Unraid Docker template:
 | `/var/run/docker.sock` | `/var/run/docker.sock` | Read/Write | Access host Docker daemon |
 | `/mnt/user` | `/mnt/user` | Read/Write | Access Unraid user shares |
 | `/opt/toolbox` | `/mnt/user/appdata/toolbox` | Read/Write | Toolbox appdata |
-| `/root` | `/mnt/user/appdata/toolbox/home` | Read/Write | Persistent home directory |
+| `/root` | `/mnt/user/appdata/toolbox/home` | Read/Write | Persistent home directory (includes `.config/` for claude, opencode, etc.) |
+
+> **Note:** The `/root` mapping already persists all app configs. Do **not** add a separate `/root/.config` mapping — it creates a split home directory and serves no additional benefit.
 
 **Extra Parameters:**
 ```
