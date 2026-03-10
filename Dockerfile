@@ -73,7 +73,7 @@ RUN ln -s $(which fdfind) /usr/local/bin/fd
 # add Node 20 + opencode
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get update && apt-get install -y nodejs \
-    && npm install -g opencode-ai \
+    && npm install -g opencode-ai @anthropic-ai/claude-code \
     && npm cache clean --force \
     && rm -rf /var/lib/apt/lists/*
 ENV XDG_CACHE_HOME=/tmp/.cache
