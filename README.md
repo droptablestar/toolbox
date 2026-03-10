@@ -44,3 +44,13 @@ To enable Intel GPU access for hardware transcoding:
 ```bash
 docker run -it --rm --device /dev/dri:/dev/dri toolbox
 ```
+
+## Unraid Docker Template Setup
+
+To access the host's Docker daemon from inside the container (enabling `docker ps`, `docker logs`, etc. against Unraid containers), add a path mapping in the Unraid Docker template:
+
+| Field | Value |
+|-------|-------|
+| Container Path | `/var/run/docker.sock` |
+| Host Path | `/var/run/docker.sock` |
+| Access Mode | Read/Write |
