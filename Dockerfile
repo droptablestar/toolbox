@@ -1,9 +1,12 @@
 FROM ubuntu:24.04
 
+ARG GOSU_VERSION=1.17
+
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PUID=99
 ENV PGID=100
 
+# Base packages from Ubuntu repos
 RUN apt-get update && apt-get install -y \
     # Core utilities
     git \
@@ -25,7 +28,6 @@ RUN apt-get update && apt-get install -y \
     mediainfo \
     mkvtoolnix \
     handbrake-cli \
-    yt-dlp \
     # Python
     python3 \
     python3-pip \
@@ -42,7 +44,7 @@ RUN apt-get update && apt-get install -y \
     # File management
     fd-find \
     ripgrep \
-    # Docker dependencies
+    # Third-party repo prereqs
     ca-certificates \
     gnupg \
     lsb-release \
@@ -51,51 +53,51 @@ RUN apt-get update && apt-get install -y \
     vainfo \
     && rm -rf /var/lib/apt/lists/*
 
-# Install GitHub CLI
-RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+# GitHub CLI + Docker CLI (require keyring setup before install)
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+        | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
     && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
-    | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-    && apt-get update && apt-get install -y gh \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Docker CLI
-RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
+        > /etc/apt/sources.list.d/github-cli.list \
+    && curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+        | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg \
     && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
-    https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
-    | tee /etc/apt/sources.list.d/docker.list > /dev/null \
+        https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
+        > /etc/apt/sources.list.d/docker.list \
     && apt-get update && apt-get install -y \
-    docker-ce-cli \
-    docker-compose-plugin \
+        gh \
+        docker-ce-cli \
+        docker-compose-plugin \
     && rm -rf /var/lib/apt/lists/*
 
 # Make 'fd' available as 'fd' instead of 'fdfind'
 RUN ln -s $(which fdfind) /usr/local/bin/fd
 
-# add Node 20 + opencode
+# Node 20 + npm globals
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get update && apt-get install -y nodejs \
+    && npm config set prefix /usr/local \
     && npm install -g opencode-ai @anthropic-ai/claude-code \
     && npm cache clean --force \
     && rm -rf /var/lib/apt/lists/*
 ENV XDG_CACHE_HOME=/tmp/.cache
-# optional but recommended in your container environment
-# ENV OPENCODE_DISABLE_DEFAULT_PLUGINS=true
 
-# Install gosu for privilege dropping in entrypoint
-RUN curl -fsSL "https://github.com/tianon/gosu/releases/download/1.17/gosu-amd64" \
+# gosu for privilege dropping in entrypoint
+RUN curl -fsSL "https://github.com/tianon/gosu/releases/download/${GOSU_VERSION}/gosu-amd64" \
         -o /usr/local/bin/gosu \
     && chmod +x /usr/local/bin/gosu \
     && gosu --version
 
-RUN apt-get update && apt-get install -y curl ffmpeg python3 \
- && curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
-    -o /usr/local/bin/yt-dlp \
- && chmod a+rx /usr/local/bin/yt-dlp
+# Standalone binaries (yt-dlp, lazygit)
+RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
+        -o /usr/local/bin/yt-dlp \
+    && chmod a+rx /usr/local/bin/yt-dlp \
+    && LAZYGIT_VERSION=$(curl -fsSL https://api.github.com/repos/jesseduffield/lazygit/releases/latest \
+        | grep '"tag_name"' | sed 's/.*"v\([^"]*\)".*/\1/') \
+    && curl -fsSL "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz" \
+        | tar xz -C /usr/local/bin lazygit
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["/bin/bash"]
-
-

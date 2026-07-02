@@ -30,13 +30,20 @@ chown "${PUID}:${PGID}" /root
 mkdir -p /tmp/.cache
 chown "${PUID}:${PGID}" /tmp/.cache
 
-# Docker socket: add user to the socket's group
+# Docker socket: add user to the socket's group.
+# groupmod is used when the image already has a 'docker' group from docker-ce-cli
+# with a different GID than the host socket — groupadd would fail silently in that case.
 if [ -S /var/run/docker.sock ]; then
     SOCK_GID=$(stat -c '%g' /var/run/docker.sock)
-    if ! getent group "${SOCK_GID}" > /dev/null 2>&1; then
-        groupadd --gid "${SOCK_GID}" docker 2>/dev/null || true
+    SOCK_GROUP=$(getent group "${SOCK_GID}" | cut -d: -f1)
+    if [ -z "${SOCK_GROUP}" ]; then
+        if getent group docker > /dev/null 2>&1; then
+            groupmod --gid "${SOCK_GID}" docker 2>/dev/null || true
+        else
+            groupadd --gid "${SOCK_GID}" docker 2>/dev/null || true
+        fi
+        SOCK_GROUP=$(getent group "${SOCK_GID}" | cut -d: -f1 || true)
     fi
-    SOCK_GROUP=$(getent group "${SOCK_GID}" | cut -d: -f1 || true)
     [ -n "${SOCK_GROUP}" ] && usermod -aG "${SOCK_GROUP}" "${TOOLBOX_USER}" 2>/dev/null || true
 fi
 
@@ -44,12 +51,21 @@ fi
 for dev in /dev/dri/renderD128 /dev/dri/card0; do
     if [ -e "${dev}" ]; then
         DEV_GID=$(stat -c '%g' "${dev}")
-        if ! getent group "${DEV_GID}" > /dev/null 2>&1; then
-            groupadd --gid "${DEV_GID}" render 2>/dev/null || true
+        DEV_GROUP=$(getent group "${DEV_GID}" | cut -d: -f1)
+        if [ -z "${DEV_GROUP}" ]; then
+            if getent group render > /dev/null 2>&1; then
+                groupmod --gid "${DEV_GID}" render 2>/dev/null || true
+            else
+                groupadd --gid "${DEV_GID}" render 2>/dev/null || true
+            fi
+            DEV_GROUP=$(getent group "${DEV_GID}" | cut -d: -f1 || true)
         fi
-        DEV_GROUP=$(getent group "${DEV_GID}" | cut -d: -f1 || true)
         [ -n "${DEV_GROUP}" ] && usermod -aG "${DEV_GROUP}" "${TOOLBOX_USER}" 2>/dev/null || true
     fi
 done
+
+# Allow toolbox user to write npm globals
+chown -R "${PUID}:${PGID}" /usr/local/lib/node_modules
+chown -R "${PUID}:${PGID}" /usr/local/bin
 
 exec gosu "${TOOLBOX_USER}" "$@"
