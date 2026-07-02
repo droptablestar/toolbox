@@ -4,6 +4,13 @@ set -euo pipefail
 IMAGE="droptablestar/toolbox"
 EXTRA_TAG="${1:-}"
 
+if [[ -z "${EXTRA_TAG}" ]]; then
+  read -rp "Tag this build with today's date and create a GitHub release? [y/N] " REPLY
+  if [[ "${REPLY}" =~ ^[Yy]$ ]]; then
+    EXTRA_TAG="$(date +%Y-%m-%d)"
+  fi
+fi
+
 echo "Building ${IMAGE}:latest..."
 docker build --pull --no-cache -t "${IMAGE}:latest" .
 
