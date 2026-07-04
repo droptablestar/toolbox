@@ -60,7 +60,7 @@ Configure the following path mappings in the Unraid Docker template:
 
 **Extra Parameters:**
 ```
---device /dev/dri:/dev/dri --group-add video
+--device /dev/dri:/dev/dri --group-add video --hostname=toolbox
 ```
 
 **Post Arguments:**
